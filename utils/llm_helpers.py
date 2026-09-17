@@ -17,11 +17,15 @@ from html import escape
 
 # === Env & Clients ===
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
-anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+openai_api_key = os.getenv("SERVICE_API_KEY")
+anthropic_api_key = os.getenv("SERVICE_API_KEY")
 
 # Both clients read keys from env by default; explicit is also fine:
-openai_client = OpenAI(api_key=openai_api_key) if openai_api_key else OpenAI()
+openai_client = (
+    OpenAI(api_key=openai_api_key, base_url="https://api.groq.com/openai/v1")
+    if openai_api_key
+    else OpenAI()
+)
 anthropic_client = Anthropic(api_key=anthropic_api_key) if anthropic_api_key else Anthropic()
 
 
@@ -199,17 +203,17 @@ def image_anthropic_call(model_name: str, prompt: str, media_type: str, b64: str
 
 def image_openai_call(model_name: str, prompt: str, media_type: str, b64: str) -> str:
     data_url = f"data:{media_type};base64,{b64}"
-    resp = openai_client.responses.create(
+    resp = openai_client.chat.completions.create(
         model=model_name,
-        input=[
+        messages=[
             {
                 "role": "user",
                 "content": [
-                    {"type": "input_text", "text": prompt},
-                    {"type": "input_image", "image_url": data_url},
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": data_url}},
                 ],
             }
         ],
     )
-    content = (resp.output_text or "").strip()
+    content = (resp.choices[0].message.content or "").strip()
     return content
